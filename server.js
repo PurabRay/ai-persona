@@ -98,6 +98,31 @@ async function askStream(query, history, onChunk) {
   return full;
 }
 
+app.post("/vapi/chat/completions", async (req, res) => {
+  const { messages } = req.body;
+  const userMessage = messages.filter(m => m.role === "user").pop()?.content || "";
+  const history = messages.filter(m => m.role !== "system");
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    await askStream(userMessage, history, (chunk) => {
+      res.write(`data: ${JSON.stringify({
+        choices: [{ delta: { content: chunk }, finish_reason: null }]
+      })}\n\n`);
+    });
+    res.write(`data: ${JSON.stringify({
+      choices: [{ delta: {}, finish_reason: "stop" }]
+    })}\n\n`);
+    res.write("data: [DONE]\n\n");
+  } catch (err) {
+    console.error("Vapi LLM error:", err);
+  }
+  res.end();
+});
+
 // ── Calendar (Cal.com — v2 API) ───────────────────────────────────────────────
 
 const CAL_HEADERS = {
