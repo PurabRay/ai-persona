@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Persona</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #app {
+      width: 100%;
+      max-width: 700px;
+      height: 100dvh;
+      max-height: 800px;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.10);
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+    }
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 16px; font-weight: 600; color: #111; }
+    header p  { font-size: 12px; color: #888; margin-top: 2px; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #00b894;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* Messages */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .msg {
+      max-width: 82%;
+      padding: 10px 15px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #6c5ce7;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: #f1f0f5;
+      color: #111;
+      border-bottom-left-radius: 4px;
+    }
+    .msg.bot.typing { color: #999; }
+
+    /* Suggestions */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 16px 10px;
+    }
+    .suggestions button {
+      font-size: 12px;
+      padding: 7px 13px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+      color: #555;
+      transition: all .15s;
+    }
+    .suggestions button:hover {
+      background: #f3f0ff;
+      border-color: #6c5ce7;
+      color: #6c5ce7;
+    }
+
+    /* Input bar */
+    footer {
+      padding: 12px 16px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 8px;
+      background: #fff;
+    }
+    #input {
+      flex: 1;
+      padding: 10px 15px;
+      border-radius: 24px;
+      border: 1.5px solid #ddd;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    #input:focus { border-color: #6c5ce7; }
+    #send {
+      padding: 10px 20px;
+      border-radius: 24px;
+      border: none;
+      background: #6c5ce7;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity .15s;
+    }
+    #send:disabled { opacity: .45; cursor: default; }
+    #book-btn {
+      padding: 10px 14px;
+      border-radius: 24px;
+      border: 1.5px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #book-btn:hover { border-color: #6c5ce7; }
+
+    /* Modal */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px;
+      width: 100%;
+      max-width: 420px;
+      max-height: 82vh;
+      overflow-y: auto;
+      margin: 16px;
+    }
+    #modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 18px; }
+    .slot-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 1.5px solid #eee;
+      background: #fff;
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all .15s;
+    }
+    .slot-btn:hover { border-color: #6c5ce7; background: #f3f0ff; color: #6c5ce7; }
+    .form-input {
+      display: block;
+      width: 100%;
+      padding: 10px 13px;
+      border-radius: 10px;
+      border: 1.5px solid #ddd;
+      font-size: 14px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .form-input:focus { border-color: #6c5ce7; }
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: #6c5ce7;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-primary:disabled { opacity: .5; cursor: default; }
+    .btn-secondary {
+      width: 100%;
+      padding: 11px;
+      border-radius: 10px;
+      border: 1.5px solid #ddd;
+      background: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .success-icon { font-size: 44px; text-align: center; margin-bottom: 12px; }
+    .modal-note { font-size: 12px; color: #aaa; text-align: center; margin-top: 16px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="avatar">🤖</div>
+    <div>
+      <h1 id="persona-name">AI Persona</h1>
+      <p>Ask about background, projects, or book a call</p>
+    </div>
+    <div class="status-dot" title="Online"></div>
+  </header>
+
+  <div id="messages"></div>
+
+  <div class="suggestions" id="suggestions">
+    <button onclick="send('Why are you the right person for this role?')">Why you for this role?</button>
+    <button onclick="send('Tell me about your best GitHub project')">Best GitHub project</button>
+    <button onclick="send('Walk me through your work experience')">Work experience</button>
+    <button onclick="send('What are your strongest technical skills?')">Technical skills</button>
+    <button onclick="send('What is your availability this week?')">Book a call 📅</button>
+  </div>
+
+  <footer>
+    <input id="input" placeholder="Ask anything..." onkeydown="if(event.key==='Enter' && !event.shiftKey) { sendInput(); event.preventDefault(); }"/>
+    <button id="send" onclick="sendInput()">Send</button>
+    <button id="book-btn" onclick="openModal()" title="Book a call">📅</button>
+  </footer>
+</div>
+
+<!-- Booking modal -->
+<div id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div id="modal">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+  // ── Change this to your deployed backend URL when you deploy ──────────────
+  const API = "http://localhost:3001";
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const history = [];
+  let slots = [];
+  let selectedSlot = null;
+  let busy = false;
+
+  // Greeting
+  addMsg("bot", "Hi! I'm an AI persona. Ask me about my background, projects, or book a call. How can I help?");
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+
+  function addMsg(role, text, cssExtra = "") {
+    const el = document.createElement("div");
+    el.className = `msg ${role}${cssExtra ? " " + cssExtra : ""}`;
+    el.textContent = text;
+    const messages = document.getElementById("messages");
+    messages.appendChild(el);
+    el.scrollIntoView({ behavior: "smooth", block: "end" });
+    return el;
+  }
+
+  async function send(text) {
+    text = text.trim();
+    if (!text || busy) return;
+    busy = true;
+
+    document.getElementById("suggestions").style.display = "none";
+    addMsg("user", text);
+    history.push({ role: "user", content: text });
+
+    const botEl = addMsg("bot", "▍", "typing");
+    document.getElementById("send").disabled = true;
+
+    try {
+      const res = await fetch(`${API}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history: history.slice(0, -1) }),
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      let full = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+
+        // Process all complete SSE lines in the buffer
+        let boundary;
+        while ((boundary = buf.indexOf("\n\n")) !== -1) {
+          const line = buf.slice(0, boundary).trim();
+          buf = buf.slice(boundary + 2);
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const d = JSON.parse(line.slice(6));
+            if (d.chunk) {
+              full += d.chunk;
+              botEl.textContent = full;
+              botEl.classList.remove("typing");
+              botEl.scrollIntoView({ behavior: "smooth", block: "end" });
+            }
+          } catch { /* malformed line — skip */ }
+        }
+      }
+
+      if (!full) full = "Sorry, I didn't get a response. Please try again.";
+      botEl.textContent = full;
+      history.push({ role: "assistant", content: full });
+
+      // Auto-open booking modal if the response mentions slots
+      if (/available|slot|book|schedule/i.test(full)) {
+        setTimeout(openModal, 700);
+      }
+    } catch (err) {
+      botEl.textContent = "Connection error. Is the server running?";
+      console.error(err);
+    }
+
+    document.getElementById("send").disabled = false;
+    busy = false;
+  }
+
+  function sendInput() {
+    const el = document.getElementById("input");
+    send(el.value);
+    el.value = "";
+  }
+
+  // ── Booking modal ─────────────────────────────────────────────────────────
+
+  async function openModal() {
+    document.getElementById("modal-overlay").classList.add("open");
+    document.getElementById("modal-content").innerHTML =
+      "<p style='color:#aaa;font-size:14px;text-align:center;padding:20px 0'>Loading available slots…</p>";
+
+    try {
+      const res = await fetch(`${API}/slots`);
+      const data = await res.json();
+      slots = data.slots || [];
+      showSlots();
+    } catch {
+      document.getElementById("modal-content").innerHTML =
+        "<p style='color:#e17055;font-size:14px'>Could not load slots. Is the server running?</p>";
+    }
+  }
+
+  function closeModal() {
+    document.getElementById("modal-overlay").classList.remove("open");
+    selectedSlot = null;
+  }
+
+  function showSlots() {
+    document.getElementById("modal-content").innerHTML = `
+      <h2>Pick a time</h2>
+      ${slots.length
+        ? slots.map((s, i) => `<button class="slot-btn" onclick="selectSlot(${i})">${s.human}</button>`).join("")
+        : "<p style='color:#aaa;font-size:14px'>No slots available this week. Connect your Cal.com calendar to show availability.</p>"
+      }
+      <p class="modal-note">Times shown in your local timezone</p>
+    `;
+  }
+
+  function selectSlot(i) {
+    selectedSlot = slots[i];
+    document.getElementById("modal-content").innerHTML = `
+      <h2>Confirm booking</h2>
+      <p style="font-size:13px;color:#666;margin-bottom:18px">📅 ${selectedSlot.human}</p>
+      <input class="form-input" id="b-name" placeholder="Your full name" autocomplete="name"/>
+      <input class="form-input" id="b-email" type="email" placeholder="Your email" autocomplete="email"/>
+      <input class="form-input" id="b-notes" placeholder="What would you like to discuss? (optional)"/>
+      <button class="btn-primary" id="confirm-btn" onclick="confirmBooking()">Confirm Booking</button>
+      <button class="btn-secondary" onclick="showSlots()">← Back to slots</button>
+    `;
+    document.getElementById("b-name").focus();
+  }
+
+  async function confirmBooking() {
+    const name  = document.getElementById("b-name").value.trim();
+    const email = document.getElementById("b-email").value.trim();
+    const notes = document.getElementById("b-notes").value.trim();
+
+    if (!name || !email) {
+      alert("Please fill in your name and email.");
+      return;
+    }
+
+    const btn = document.getElementById("confirm-btn");
+    btn.disabled = true;
+    btn.textContent = "Booking…";
+
+    try {
+      const res = await fetch(`${API}/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, slotIso: selectedSlot.iso, notes }),
+      });
+      const data = await res.json();
+
+      if (!data.ok) throw new Error(data.error || "Booking failed");
+
+      document.getElementById("modal-content").innerHTML = `
+        <div class="success-icon">✅</div>
+        <h2 style="text-align:center;margin-bottom:8px">You're booked!</h2>
+        <p style="text-align:center;font-size:14px;color:#555;margin-bottom:6px">${selectedSlot.human}</p>
+        <p style="text-align:center;font-size:13px;color:#aaa;margin-bottom:24px">Confirmation sent to ${email}</p>
+        <button class="btn-secondary" onclick="closeModal()">Close</button>
+      `;
+
+      // Echo the booking in chat
+      addMsg("bot", `✅ Booked! You'll get a confirmation at ${email} for ${selectedSlot.human}.`);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = "Confirm Booking";
+      alert("Booking failed: " + err.message);
+    }
+  }
+</script>
+</body>
+</html>
