@@ -1,20 +1,30 @@
 // ingest.js — run once: node ingest.js
-// Loads resume.txt + your GitHub repos into Pinecone for RAG
-// Uses Gemini text-embedding-004 (free tier, no credit card needed)
+// Loads resume.txt + GitHub READMEs only (no source code) into Pinecone for RAG
 
 import "dotenv/config";
 import fs from "fs/promises";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Octokit } from "octokit";
 
-const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-const octokit = new Octokit();
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// Gemini text-embedding-004 → 768 dimensions (free tier)
-const EMBED_MODEL = "text-embedding-004";
-const EMBED_DIM = 768;
+const EMBED_MODEL = "gemini-embedding-001";
+const EMBED_DIM = 3072;
+
+// These 10 repos are always ingested first and guaranteed to be included
+const PRIORITY_REPOS = [
+  "IDP",
+  "smart-meeting-scheduler",
+  "AI-Resume-Parser",
+  "Course-recommender",
+  "spreadsheet-app",
+  "graph_assignment",
+  "pocket-bazaar",
+  "LinkedInScraper",
+  "Fitpro",
+  "pocket-expense",
+];
 
 function chunkText(text, source) {
   const words = text.split(/\s+/);
@@ -25,11 +35,21 @@ function chunkText(text, source) {
   return chunks;
 }
 
-// Embed one text at a time with a small delay to respect Gemini free tier (5 RPM)
 async function embedOne(text) {
-  const model = genai.getGenerativeModel({ model: EMBED_MODEL });
-  const result = await model.embedContent(text);
-  return result.embedding.values;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: `models/${EMBED_MODEL}`,
+        content: { parts: [{ text }] },
+      }),
+    }
+  );
+  const data = await res.json();
+  if (!data.embedding) throw new Error(`Embed failed: ${JSON.stringify(data)}`);
+  return data.embedding.values;
 }
 
 async function upsert(index, chunks) {
@@ -43,7 +63,7 @@ async function upsert(index, chunks) {
         values,
         metadata: { text: chunk.text, source: chunk.source },
       });
-      // Stay under the free tier rate limit (5 RPM = 1 request per 12s to be safe)
+      // Stay under Gemini free tier rate limit (5 RPM)
       await new Promise((r) => setTimeout(r, 13000));
     }
     await index.upsert(vectors);
@@ -51,57 +71,79 @@ async function upsert(index, chunks) {
   }
 }
 
-async function main() {
-  // Create Pinecone index if it doesn't exist — must be dim 768 for Gemini embeddings
-  const existing = await pinecone.listIndexes();
-  if (!existing.indexes?.find((x) => x.name === process.env.PINECONE_INDEX)) {
-    console.log("Creating Pinecone index (dim=768 for Gemini embeddings)...");
-    await pinecone.createIndex({
-      name: process.env.PINECONE_INDEX,
-      dimension: EMBED_DIM,
-      metric: "cosine",
-      spec: { serverless: { cloud: "aws", region: "us-east-1" } },
-    });
-    console.log("Waiting 15s for index to be ready...");
-    await new Promise((r) => setTimeout(r, 15000));
-  }
+async function ingestRepo(repo, chunks, label = "") {
+  try {
+    let content = `Repo: ${repo.name}\nLanguage: ${repo.language || "N/A"}\nDescription: ${repo.description || "No description"}\n\n`;
 
-  const index = pinecone.index(process.env.PINECONE_INDEX);
-  const chunks = [];
-
-  // Load resume
-  console.log("Loading resume.txt...");
-  const resume = await fs.readFile("resume.txt", "utf8");
-  chunks.push(...chunkText(resume, "resume"));
-
-  // Load GitHub repos
-  console.log(`Loading GitHub repos for ${process.env.GITHUB_USERNAME}...`);
-  const { data: repos } = await octokit.rest.repos.listForUser({
-    username: process.env.GITHUB_USERNAME,
-    sort: "updated",
-    per_page: 15,
-  });
-
-  for (const repo of repos.filter((r) => !r.fork)) {
+    // README only — no source code
     try {
       const { data } = await octokit.rest.repos.getReadme({
         owner: repo.owner.login,
         repo: repo.name,
       });
       const readme = Buffer.from(data.content, "base64").toString("utf8");
-      const content = `Repo: ${repo.name}\nDescription: ${repo.description}\nLanguage: ${repo.language}\n\n${readme}`;
-      chunks.push(...chunkText(content, `github:${repo.name}`));
-      console.log(`  + ${repo.name}`);
+      content += `README:\n${readme}\n`;
     } catch {
-      /* no readme — skip */
+      console.log(`  ⚠️  No README found for ${repo.name}`);
     }
+
+    chunks.push(...chunkText(content, `github:${repo.name}`));
+    console.log(`  ✓ ${label || repo.name}`);
+  } catch (e) {
+    console.log(`  ⚠️  Skipped ${repo.name}: ${e.message}`);
+  }
+}
+
+async function main() {
+  // Recreate index fresh
+  const existing = await pinecone.listIndexes();
+  if (existing.indexes?.find((x) => x.name === process.env.PINECONE_INDEX)) {
+    console.log("Deleting existing Pinecone index for clean re-ingest...");
+    await pinecone.deleteIndex(process.env.PINECONE_INDEX);
+    await new Promise((r) => setTimeout(r, 10000));
   }
 
-  console.log(`\nUpserting ${chunks.length} chunks...`);
+  console.log("Creating Pinecone index (dim=3072 for Gemini embeddings)...");
+  await pinecone.createIndex({
+    name: process.env.PINECONE_INDEX,
+    dimension: EMBED_DIM,
+    metric: "cosine",
+    spec: { serverless: { cloud: "aws", region: "us-east-1" } },
+  });
+  console.log("Waiting 15s for index to be ready...");
+  await new Promise((r) => setTimeout(r, 15000));
+
+  const index = pinecone.index(process.env.PINECONE_INDEX);
+  const chunks = [];
+
+  // ── Resume ────────────────────────────────────────────────────────────────
+  console.log("\nLoading resume.txt...");
+  const resume = await fs.readFile("resume.txt", "utf8");
+  chunks.push(...chunkText(resume, "resume"));
+  console.log("  ✓ resume.txt");
+
+  // ── Priority repos — always ingested, guaranteed ──────────────────────────
+  console.log(`\nIngesting ${PRIORITY_REPOS.length} priority repos (README only)...`);
+  for (const repoName of PRIORITY_REPOS) {
+    try {
+      const { data: repo } = await octokit.rest.repos.get({
+        owner: process.env.GITHUB_USERNAME,
+        repo: repoName,
+      });
+      await ingestRepo(repo, chunks, `${repoName} [PRIORITY]`);
+    } catch (e) {
+      console.log(`  ⚠️  Could not fetch priority repo ${repoName}: ${e.message}`);
+    }
+    // Small delay between requests
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  // ── Upsert all chunks ─────────────────────────────────────────────────────
+  console.log(`\nUpserting ${chunks.length} chunks into Pinecone...`);
   console.log("Note: pacing requests to stay within Gemini free tier (5 RPM).");
   console.log(`Estimated time: ~${Math.ceil((chunks.length * 13) / 60)} minutes\n`);
   await upsert(index, chunks);
-  console.log("Done! Your persona is ready.");
+  console.log("\nDone! Your persona is ready.");
 }
 
 main().catch(console.error);

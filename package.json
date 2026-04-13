@@ -8,7 +8,8 @@
     "ingest": "node ingest.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.15.0",
+    "openai": "^4.28.0",
+    "@google/generative-ai": "^0.24.1",
     "@pinecone-database/pinecone": "^3.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

@@ -1,52 +1,49 @@
-# Replace this entire file with your actual resume as plain text.
-# The more detail you add, the better the AI will answer questions.
-# Include: projects with tech stack, tradeoffs, outcomes; experience with numbers/impact; skills.
-
-Name: Your Full Name
-Email: you@email.com
-Phone: +91-XXXXXXXXXX
-GitHub: github.com/yourusername
-LinkedIn: linkedin.com/in/yourname
-Location: City, Country
-
-## Summary
-2-3 sentences describing who you are, what you specialise in, and what makes you a strong candidate.
-
-## Experience
-
-Job Title — Company Name (Month Year – Month Year)
-- What you built, shipped, or improved — with numbers where possible
-- Technologies used (e.g. React, Node.js, PostgreSQL, AWS)
-- Scale or impact (e.g. "reduced latency by 40%", "served 50k daily users")
-
-Job Title — Company Name (Month Year – Month Year)
-- Achievement 1
-- Achievement 2
-
-## Projects
-
-Project Name (github.com/youruser/repo)
-Tech: React, Node.js, PostgreSQL, Redis
-What it does: One sentence describing the product.
-Why you built it: Motivation or problem it solves.
-Key tradeoffs: e.g. "Chose Redis over a DB for ephemeral session state to keep latency under 20ms."
-Outcome: Users, stars, or other measurable result.
-
-Project Name (github.com/youruser/repo)
-Tech: Python, FastAPI, Docker
-What it does: ...
-Key tradeoffs: ...
-
-## Education
-
-Degree, Major — University Name (Year – Year)
-Relevant coursework or achievements
-
-## Skills
-
-Languages: JavaScript, TypeScript, Python, Go
-Frontend: React, Next.js, Tailwind CSS
-Backend: Node.js, Express, FastAPI, Django
-Databases: PostgreSQL, MongoDB, Redis
-Cloud & DevOps: AWS (EC2, S3, Lambda), Docker, GitHub Actions
-Other: REST APIs, GraphQL, system design, agile
+Skills
+• MySQL, React, HTML, CSS, Python, Generative AI, Node.js, MongoDB
+Experience
+AI Research Intern,WNS Vuram Mar 2025 - Jun 2025
+Developed an Intelligent Document Processing application utilizing generative AI from LLMs and SLMs to extract customizable data from
+various document formats, including scanned and unscanned PDFs, PNGs, and JPEGs, handling bulk using batch processing.
+Implemented Optical Character Recognition (OCR) to enhance data extraction capabilities from images and documents.
+Implemented Search feature, utilizing the data of coordinates via bounding boxes to search for dynamically extracted information on the
+document preview
+Data analysis Intern,Undivided Capital Feb 2025 - May 2025
+Worked as an Intern to help scrape data regarding potential would-be founders to invest in, worked on ranking algorithms to rank them in the
+order of favourability
+Software Development Engineer (Frontend),Zinier Dec 2024 - Mar 2025
+Contributed to solutions delivery team by developing low-code applications to meet client needs.
+Software Development Engineer (Full Stack), innoverv Aug 2024 - Nov 2024
+Designed and implemented a vendor portal system to streamline the process of incoming requests and verifying them.
+Projects
+Personal Portfolio
+Developed personal Portfolio using React.js and Tailwind CSS to showcase projects and skills effectively.
+Yulu project
+Analyzed a sales dataset for Yulu, uncovering key trends that informed strategic decision-making and improved sales performance by
+15%.
+expense tracker
+Developed a full-stack web application to manage and track personal expenses.
+Built a user-friendly interface for adding, viewing, and categorizing expenses using React.js.
+Implemented RESTful APIs with Node.js and Express to handle transactions and database operations.
+Utilized MongoDB to store user data, ensuring efficient and secure data handling.
+Included features such as real-time data visualization, filtering, and date-based sorting of expenses.
+Resource Recommender
+Utilized the Llama 3.1 API to recommend resources tailored to beginner, intermediate, and advanced users across specific subjects,
+incorporating caching for improved performance. Used React and Node.
+Implemented a 3D parallax design to enhance visual engagement and user experience.
+Resume Parser
+Utilized Llama 3.1 API to parse resumes and store data in MongoDB, employing React and Node for development.
+Generated ATS scores based on job descriptions, providing reasoning for each score and identifying missing skills with links to resources
+for proficiency at beginner, intermediate, and advanced levels.
+Education
+Scaler School of Technology,Other 2027
+CGR:6.3
+BITS Pilani,BSc 2026
+5.7
+Explore international,Other 2023
+CBSE
+90%
+Sri Sri Academy,Other 2021
+ICSE
+95%
+Achievements
+LeetCode rating:1745
