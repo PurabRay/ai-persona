@@ -99,14 +99,7 @@ Push to GitHub and connect to Render. Add all env vars in the Render dashboard. 
 
 ---
 
-## Voice Agent Setup (Vapi)
-
-1. Create an account at vapi.ai
-2. Create a phone number
-3. Create an assistant, set provider to Custom LLM, URL to `https://your-app.onrender.com/vapi/chat/completions`
-4. Set org-level server URL to `https://your-app.onrender.com/vapi`
-5. Assign the phone number to the assistant
-
+   
 The agent handles intro, Q&A, slot fetching, and booking automatically via two registered tools: `getSlots` and `bookMeeting`.
 
 ---
